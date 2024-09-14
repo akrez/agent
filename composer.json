@@ -1,9 +1,14 @@
 {
     "require": {
-        "guzzlehttp/guzzle": "^7.9"
+        "guzzlehttp/guzzle": "*"
     },
     "require-dev": {
-        "symfony/var-dumper": "^7.1",
-        "laravel/pint": "^1.17"
+        "symfony/var-dumper": "*",
+        "laravel/pint": "*"
+    },
+    "config": {
+        "platform": {
+            "php": "8.0.0"
+        }
     }
 }

@@ -1,19 +1,27 @@
 <?php
 
-use GuzzleHttp\Psr7\Message;
 use GuzzleHttp\Psr7\ServerRequest;
+use GuzzleHttp\Psr7\Uri;
 
-require './vendor/autoload.php';
+require_once './vendor/autoload.php';
 
-$req = ServerRequest::fromGlobals();
+function extractUri()
+{
+    $basePath = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
+    $slashedTargetUrl = substr($_SERVER['REQUEST_URI'], strlen($basePath));
+    $parts = explode('/', $slashedTargetUrl, 2) + array_fill(0, 2, null);
 
+    if (
+        in_array($parts[0], ['http', 'https']) and
+        $parts[1] and
+        $url = filter_var($parts[0].'://'.$parts[1], FILTER_VALIDATE_URL)
+    ) {
+        return $url;
+    }
 
-dd(
-    $req->getUploadedFiles(),
-    substr($_SERVER['REQUEST_URI'], 0, strlen(dirname($_SERVER['PHP_SELF']))),
-    __DIR__,
-    $_SERVER['PHP_SELF'],
-    dirname($_SERVER['PHP_SELF']),
-    $req->getUri(),
-    $_SERVER
-);
+    return null;
+}
+
+$newUri = extractUri();
+
+$request = ServerRequest::fromGlobals()->withUri(new Uri($newUri));
