@@ -1,6 +1,7 @@
 {
     "require": {
-        "guzzlehttp/guzzle": "*"
+        "guzzlehttp/guzzle": "*",
+        "laminas/laminas-httphandlerrunner": "*"
     },
     "require-dev": {
         "symfony/var-dumper": "*",
@@ -8,7 +9,7 @@
     },
     "config": {
         "platform": {
-            "php": "8.0.0"
+            "php": "8.0"
         }
     }
 }
