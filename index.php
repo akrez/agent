@@ -115,9 +115,9 @@ if (! $newUri) {
 
 $request = ServerRequest::fromGlobals()->withUri(new Uri($newUri));
 
-$request = $request
-    ->withoutHeader('Accept-Encoding')
-    ->withHeader('Accept-Encoding', 'gzip, deflate');
+// $request = $request
+//     ->withoutHeader('Accept-Encoding')
+//     ->withHeader('Accept-Encoding', 'gzip, deflate');
 
 if ($boundaryName = getBoundary($request)) {
     $request = setMultipart($boundaryName, $request);
