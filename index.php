@@ -125,7 +125,7 @@ if ($boundaryName = getBoundary($request)) {
 
 $response = send($request);
 
-$response = $response->withoutHeader('Transfer-Encoding');
+// $response = $response->withoutHeader('Transfer-Encoding');
 
 if (!$response->hasHeader('Content-Disposition') && !$response->hasHeader('Content-Range')) {
     (new SapiEmitter())->emit($response);
