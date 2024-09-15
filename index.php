@@ -20,7 +20,8 @@ function requestFromGlobals()
 
 function getNewUri()
 {
-    $slashedTargetUrl = $_SERVER['PATH_INFO'];
+    $basePath = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
+    $slashedTargetUrl = substr($_SERVER['REQUEST_URI'], strlen($basePath));
 
     $slashedTargetUrl = ltrim($slashedTargetUrl, " \n\r\t\v\0/");
     $parts = explode('/', $slashedTargetUrl, 2) + array_fill(0, 2, null);
