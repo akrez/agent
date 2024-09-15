@@ -20,8 +20,20 @@ function requestFromGlobals()
 
 function getNewUri()
 {
-    $basePath = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
-    $slashedTargetUrl = substr($_SERVER['REQUEST_URI'], strlen($basePath));
+    $slashedTargetUrl = null;
+
+    if (!empty($_SERVER['PATH_INFO'])) {
+        $slashedTargetUrl = $_SERVER['PATH_INFO'];
+    }
+
+    if (empty($slashedTargetUrl) && !empty($_SERVER['SCRIPT_NAME']) && !empty($_SERVER['REQUEST_URI'])) {
+        $basePath = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
+        $slashedTargetUrl = substr($_SERVER['REQUEST_URI'], strlen($basePath));
+    }
+
+    if (empty($slashedTargetUrl)) {
+        return null;
+    }
 
     $slashedTargetUrl = ltrim($slashedTargetUrl, " \n\r\t\v\0/");
     $parts = explode('/', $slashedTargetUrl, 2) + array_fill(0, 2, null);
