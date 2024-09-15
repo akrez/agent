@@ -7,6 +7,7 @@ use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
+use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use Laminas\HttpHandlerRunner\Emitter\SapiStreamEmitter;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -126,4 +127,8 @@ $response = send($request);
 
 $response = $response->withoutHeader('Transfer-Encoding');
 
-(new SapiStreamEmitter())->emit($response);
+if (!$response->hasHeader('Content-Disposition') && !$response->hasHeader('Content-Range')) {
+    (new SapiEmitter())->emit($response);
+} else {
+    (new SapiStreamEmitter())->emit($response);
+}
