@@ -19,12 +19,7 @@ function requestFromGlobals()
 
 function getNewUri()
 {
-    if (true) {
-        $slashedTargetUrl = $_SERVER['PATH_INFO'];
-    } else {
-        $basePath = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
-        $slashedTargetUrl = substr($_SERVER['REQUEST_URI'], strlen($basePath));
-    }
+    $slashedTargetUrl = $_SERVER['PATH_INFO'];
 
     $slashedTargetUrl = ltrim($slashedTargetUrl, " \n\r\t\v\0/");
     $parts = explode('/', $slashedTargetUrl, 2) + array_fill(0, 2, null);
@@ -113,6 +108,9 @@ function send($request, $clientConfig = [])
 }
 
 $newUri = getNewUri();
+if (! $newUri) {
+    die('Hard');
+}
 
 $request = ServerRequest::fromGlobals()->withUri(new Uri($newUri));
 
