@@ -21,6 +21,10 @@ function requestFromGlobals()
 
 function getNewUri()
 {
+    if (empty($_SERVER['PATH_INFO'])) {
+        return null;
+    }
+
     $slashedTargetUrl = $_SERVER['PATH_INFO'];
 
     $slashedTargetUrl = ltrim($slashedTargetUrl, " \n\r\t\v\0/");
