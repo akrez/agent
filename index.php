@@ -141,6 +141,6 @@ if ($boundaryName = getBoundary($request)) {
 
 $response = send($request);
 
-$response = $response->withoutHeader('Transfer-Encoding');
+// $response = $response->withoutHeader('Transfer-Encoding');
 
 makeEmitter($response)->emit($response);
