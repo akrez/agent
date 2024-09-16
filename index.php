@@ -20,20 +20,7 @@ function requestFromGlobals()
 
 function getNewUri()
 {
-    $slashedTargetUrl = null;
-
-    if (!empty($_SERVER['PATH_INFO'])) {
-        $slashedTargetUrl = $_SERVER['PATH_INFO'];
-    }
-
-    if (empty($slashedTargetUrl) && !empty($_SERVER['SCRIPT_NAME']) && !empty($_SERVER['REQUEST_URI'])) {
-        $basePath = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
-        $slashedTargetUrl = substr($_SERVER['REQUEST_URI'], strlen($basePath));
-    }
-
-    if (empty($slashedTargetUrl)) {
-        return null;
-    }
+    $slashedTargetUrl = $_SERVER['PATH_INFO'];
 
     $slashedTargetUrl = ltrim($slashedTargetUrl, " \n\r\t\v\0/");
     $parts = explode('/', $slashedTargetUrl, 2) + array_fill(0, 2, null);
@@ -41,7 +28,7 @@ function getNewUri()
     if (
         in_array($parts[0], ['http', 'https']) and
         $parts[1] and
-        $url = filter_var($parts[0].'://'.$parts[1], FILTER_VALIDATE_URL)
+        $url = filter_var($parts[0] . '://' . $parts[1], FILTER_VALIDATE_URL)
     ) {
         return $url;
     }
