@@ -31,9 +31,9 @@ function getNewUri()
     $parts = explode('/', $slashedTargetUrl, 2) + array_fill(0, 2, null);
 
     if (
-        in_array($parts[0], ['http', 'https']) and
-        $parts[1] and
-        $url = filter_var($parts[0] . '://' . $parts[1], FILTER_VALIDATE_URL)
+        in_array($parts[0], ['http', 'https'])
+        and $parts[1]
+        // and $url = filter_var($parts[0] . '://' . $parts[1], FILTER_VALIDATE_URL)
     ) {
         return $url;
     }
