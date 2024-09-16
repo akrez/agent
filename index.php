@@ -35,7 +35,7 @@ function getNewUri()
         and $parts[1]
         // and $url = filter_var($parts[0] . '://' . $parts[1], FILTER_VALIDATE_URL)
     ) {
-        return $url;
+        return $parts[0] . '://' . $parts[1];
     }
 
     return null;
