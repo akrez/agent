@@ -21,13 +21,27 @@ function requestFromGlobals()
 
 function getNewUri()
 {
-    if (empty($_SERVER['PATH_INFO'])) {
+    $_SERVER = $_SERVER + [
+        'PATH_INFO' => null,
+        'SCRIPT_NAME' => null,
+        'REQUEST_URI' => null,
+    ];
+
+    if ($_SERVER['PATH_INFO']) {
+        $slashedTargetUrl = $_SERVER['PATH_INFO'];
+    } elseif ($_SERVER['SCRIPT_NAME'] and $_SERVER['REQUEST_URI']) {
+        $basePath = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
+        $slashedTargetUrl = substr($_SERVER['REQUEST_URI'], strlen($basePath));
+    } else {
+        $slashedTargetUrl = null;
+    }
+
+    if ($slashedTargetUrl) {
+        $slashedTargetUrl = ltrim($slashedTargetUrl, " \n\r\t\v\0/");
+    } else {
         return null;
     }
 
-    $slashedTargetUrl = $_SERVER['PATH_INFO'];
-
-    $slashedTargetUrl = ltrim($slashedTargetUrl, " \n\r\t\v\0/");
     $parts = explode('/', $slashedTargetUrl, 2) + array_fill(0, 2, null);
 
     if (
@@ -35,7 +49,7 @@ function getNewUri()
         and $parts[1]
         // and $url = filter_var($parts[0] . '://' . $parts[1], FILTER_VALIDATE_URL)
     ) {
-        return $parts[0] . '://' . $parts[1];
+        return $parts[0].'://'.$parts[1];
     }
 
     return null;
@@ -82,7 +96,7 @@ function setMultipart(string $boundaryName, ServerRequestInterface $request)
     return $request->withBody($body);
 }
 
-function send($request, $clientConfig = [])
+function send($request, $clientConfig = []): GuzzleHttp\Psr7\Response
 {
     $timeout = ini_get('max_execution_time') ?? 60;
 
@@ -115,18 +129,18 @@ function send($request, $clientConfig = [])
 
 function makeEmitter($response)
 {
-    return new HttpSoftSapiEmitter();
+    // return new HttpSoftSapiEmitter();
 
-    if (!$response->hasHeader('Content-Disposition') && !$response->hasHeader('Content-Range')) {
-        return new SapiEmitter();
-    } else {
+    if ($response->hasHeader('Content-Disposition') or $response->hasHeader('Content-Range')) {
         return new SapiStreamEmitter();
+    } else {
+        return new SapiEmitter();
     }
 }
 
 $newUri = getNewUri();
 if (! $newUri) {
-    die('Hard');
+    exit('Hard');
 }
 
 $request = ServerRequest::fromGlobals()->withUri(new Uri($newUri));
