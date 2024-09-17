@@ -7,12 +7,10 @@ use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
-use HttpSoft\Emitter\SapiEmitter as HttpSoftSapiEmitter;
-use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
-use Laminas\HttpHandlerRunner\Emitter\SapiStreamEmitter;
 use Psr\Http\Message\ServerRequestInterface;
 
 require_once './vendor/autoload.php';
+require_once './SapiEmitter.php';
 
 function requestFromGlobals()
 {
@@ -127,17 +125,6 @@ function send($request, $clientConfig = []): GuzzleHttp\Psr7\Response
     }
 }
 
-function makeEmitter($response)
-{
-    return new HttpSoftSapiEmitter();
-
-    if ($response->hasHeader('Content-Disposition') or $response->hasHeader('Content-Range')) {
-        return new SapiStreamEmitter();
-    } else {
-        return new SapiEmitter();
-    }
-}
-
 $newUri = getNewUri();
 if (! $newUri) {
     exit('Hard');
@@ -157,4 +144,4 @@ $response = send($request);
 
 $response = $response->withoutHeader('Transfer-Encoding');
 
-makeEmitter($response)->emit($response);
+(new SapiEmitter())->emit($response);

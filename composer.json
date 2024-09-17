@@ -1,8 +1,6 @@
 {
     "require": {
-        "guzzlehttp/guzzle": "*",
-        "httpsoft/http-emitter": "*",
-        "laminas/laminas-httphandlerrunner": "*"
+        "guzzlehttp/guzzle": "*"
     },
     "require-dev": {
         "symfony/var-dumper": "*",
