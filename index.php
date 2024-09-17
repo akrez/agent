@@ -129,7 +129,7 @@ function send($request, $clientConfig = []): GuzzleHttp\Psr7\Response
 
 function makeEmitter($response)
 {
-    // return new HttpSoftSapiEmitter();
+    return new HttpSoftSapiEmitter();
 
     if ($response->hasHeader('Content-Disposition') or $response->hasHeader('Content-Range')) {
         return new SapiStreamEmitter();
