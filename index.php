@@ -1,5 +1,6 @@
 <?php
 
+use Akrez\HttpRunner\SapiEmitter;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
@@ -10,7 +11,6 @@ use GuzzleHttp\Psr7\Uri;
 use Psr\Http\Message\ServerRequestInterface;
 
 require_once './vendor/autoload.php';
-require_once './SapiEmitter.php';
 
 function requestFromGlobals()
 {

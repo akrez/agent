@@ -1,6 +1,7 @@
 {
     "require": {
-        "guzzlehttp/guzzle": "*"
+        "guzzlehttp/guzzle": "*",
+        "akrez/http-runner": "^1.0"
     },
     "require-dev": {
         "symfony/var-dumper": "*",
