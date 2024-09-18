@@ -94,10 +94,8 @@ function setMultipart(string $boundaryName, ServerRequestInterface $request)
     return $request->withBody($body);
 }
 
-function send($request, $clientConfig = []): GuzzleHttp\Psr7\Response
+function send($request, $timeout = 60, $clientConfig = []): GuzzleHttp\Psr7\Response
 {
-    $timeout = ini_get('max_execution_time') ?? 60;
-
     $defaultConfig = [
         'timeout' => $timeout,
         'connect_timeout' => $timeout,
