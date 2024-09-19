@@ -140,6 +140,6 @@ if ($boundaryName = getBoundary($request)) {
 
 $response = send($request);
 
-// $response = $response->withoutHeader('Transfer-Encoding');
+$response = $response->withoutHeader('Transfer-Encoding');
 
 (new SapiEmitter(1024000))->emit($response);
