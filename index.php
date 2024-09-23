@@ -142,4 +142,4 @@ $response = send($request);
 
 $response = $response->withoutHeader('Transfer-Encoding');
 
-(new SapiEmitter(1024000))->emit($response);
+(new SapiEmitter(102400))->emit($response);
