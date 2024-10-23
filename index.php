@@ -4,10 +4,12 @@ use Akrez\HttpRunner\SapiEmitter;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
+use GuzzleHttp\Psr7\Message;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
+use Psr\Http\Message\MessageInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 require_once './vendor/autoload.php';
@@ -121,6 +123,11 @@ function send($request, $timeout = 60, $clientConfig = []): GuzzleHttp\Psr7\Resp
     } catch (Exception $e) {
         return new Response(500, [], json_encode((array) $e), 1.1, 'Internal Server Exception Error');
     }
+}
+
+function md(MessageInterface $message)
+{
+    return Message::toString($message);
 }
 
 $newUri = getNewUri();
