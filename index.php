@@ -4,6 +4,7 @@ use Akrez\HttpRunner\SapiEmitter;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
+use GuzzleHttp\Psr7\Message;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
@@ -42,6 +43,11 @@ class Agent
             ->withoutHeader('Transfer-Encoding');
 
         $this->emitResponse($this->response);
+    }
+
+    public function dd()
+    {
+        exit(Message::toString($this->request));
     }
 
     protected static function getMultipartBoundary(RequestInterface $request): ?string
