@@ -45,12 +45,6 @@ class Agent
         $this->emitResponse($this->response);
     }
 
-    public function dd()
-    {
-        exit(Message::toString($this->request));
-    }
-
-
     protected static function getMultipartBoundary(RequestInterface $request): ?string
     {
         $contentType = $request->getHeaderLine('Content-Type');
@@ -120,7 +114,7 @@ class Agent
     }
 }
 
-function getNewRequest($serverRequest, $globalServer)
+function getNewUrl($globalServer)
 {
     $globalServer = $globalServer + [
         'PATH_INFO' => null,
@@ -143,24 +137,35 @@ function getNewRequest($serverRequest, $globalServer)
         return null;
     }
 
-    $parts = explode('/', $slashedTargetUrl, 2) + array_fill(0, 2, null);
+    $parts = explode('/', $slashedTargetUrl, 2);
 
-    if (
-        in_array($parts[0], ['http', 'https'])
-        and $parts[1]
-        // and $url = filter_var($parts[0] . '://' . $parts[1], FILTER_VALIDATE_URL)
-    ) {
-        // do nothing
+    $result = [];
+    if (in_array($parts[0], ['https', 'debughttps', 'http', 'debughttp'])) {
+        if (empty($parts[1])) {
+            return null;
+        }
+        $result['schema'] = str_replace('debug', '', $parts[0]);
+        $result['url'] = $parts[1];
+        $result['debug'] = (strpos($parts[0], 'debug') === 0);
     } else {
-        return null;
+        if (empty($parts[0])) {
+            return null;
+        }
+        $result['schema'] = 'https';
+        $result['url'] = implode('/', $parts);
+        $result['debug'] = false;
     }
 
-    return $serverRequest->withUri(new Uri($parts[0].'://'.$parts[1]));
+    return $result;
 }
 
-$request = getNewRequest(ServerRequest::fromGlobals(), $_SERVER);
-if (! $request) {
+$parts = getNewUrl($_SERVER);
+if (! $parts) {
     exit('Hard');
+}
+$request = ServerRequest::fromGlobals()->withUri(new Uri($parts['schema'].'://'.$parts['url']));
+if ($parts['debug']) {
+    exit(Message::toString($request));
 }
 $agent = new Agent($request);
 $res = $agent->send();
