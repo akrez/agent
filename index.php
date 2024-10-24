@@ -50,6 +50,7 @@ class Agent
         exit(Message::toString($this->request));
     }
 
+
     protected static function getMultipartBoundary(RequestInterface $request): ?string
     {
         $contentType = $request->getHeaderLine('Content-Type');
