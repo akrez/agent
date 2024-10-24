@@ -162,5 +162,5 @@ if (! $request) {
     exit('Hard');
 }
 $agent = new Agent($request);
-$res = $agent->send(5);
+$res = $agent->send();
 $agent->emit();
