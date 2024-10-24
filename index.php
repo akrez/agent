@@ -97,6 +97,7 @@ class Agent
             'verify' => __DIR__.DIRECTORY_SEPARATOR.'cacert.pem',
             'allow_redirects' => false,
             'referer' => false,
+            'stream' => true,
         ], $clientConfig));
 
         try {
