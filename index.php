@@ -157,6 +157,9 @@ function getNewRequest($serverRequest, $globalServer)
 }
 
 $request = getNewRequest(ServerRequest::fromGlobals(), $_SERVER);
+if (! $request) {
+    exit('Hard');
+}
 $agent = new Agent($request);
 $res = $agent->send(5);
 $agent->emit();
