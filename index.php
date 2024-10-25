@@ -1,6 +1,6 @@
 <?php
 
-use Akrez\HttpRunner\SapiEmitter;
+use Akrez\HttpRunner\SapiEmitter as AkrezSapiEmitter;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
@@ -9,6 +9,9 @@ use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
+use HttpSoft\Emitter\SapiEmitter as HttpSoftSapiEmitter;
+use Laminas\HttpHandlerRunner\Emitter\SapiEmitter as LaminasSapiEmitter;
+use Laminas\HttpHandlerRunner\Emitter\SapiStreamEmitter as LaminasSapiStreamEmitter;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -37,11 +40,11 @@ class Agent
         return $this->response = $this->sendRequest($this->request, $timeout, $clientConfig);
     }
 
-    public function emit()
+    public function emit($maxBufferLength)
     {
         // $this->response = $this->response->withoutHeader('Transfer-Encoding');
 
-        $this->emitResponse($this->response);
+        $this->emitResponse($this->response, $maxBufferLength);
     }
 
     protected static function getMultipartBoundary(RequestInterface $request): ?string
@@ -107,9 +110,17 @@ class Agent
         }
     }
 
-    protected static function emitResponse($response)
+    protected static function emitResponse($response, $maxBufferLength)
     {
-        (new SapiEmitter(1024))->emit($response);
+        
+        if ($response->hasHeader('Content-Disposition') or $response->hasHeader('Content-Range')) {
+            return new LaminasSapiStreamEmitter($maxBufferLength);
+        } else {
+            return new LaminasSapiEmitter();
+        }
+        return new HttpSoftSapiEmitter($maxBufferLength);
+
+        return (new AkrezSapiEmitter($maxBufferLength))->emit($response);
     }
 }
 
@@ -168,4 +179,4 @@ if ($parts['debug']) {
 }
 $agent = new Agent($request);
 $res = $agent->send();
-$agent->emit();
+$agent->emit(1024);
