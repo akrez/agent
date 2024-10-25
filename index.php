@@ -42,7 +42,8 @@ class Agent
 
     public function emit($maxBufferLength)
     {
-        // $this->response = $this->response->withoutHeader('Transfer-Encoding');
+        $this->response = $this->response
+            ->withoutHeader('Transfer-Encoding');
 
         $this->emitResponse($this->response, $maxBufferLength);
     }
@@ -112,12 +113,12 @@ class Agent
 
     protected static function emitResponse($response, $maxBufferLength)
     {
-        
         if ($response->hasHeader('Content-Disposition') or $response->hasHeader('Content-Range')) {
             return new LaminasSapiStreamEmitter($maxBufferLength);
         } else {
             return new LaminasSapiEmitter();
         }
+
         return new HttpSoftSapiEmitter($maxBufferLength);
 
         return (new AkrezSapiEmitter($maxBufferLength))->emit($response);
