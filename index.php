@@ -42,8 +42,8 @@ class Agent
 
     public function emit($maxBufferLength)
     {
-        $this->response = $this->response
-            ->withoutHeader('Transfer-Encoding');
+        // $this->response = $this->response
+        //     ->withoutHeader('Transfer-Encoding');
 
         $this->emitResponse($this->response, $maxBufferLength);
     }
@@ -95,7 +95,10 @@ class Agent
             'verify' => __DIR__.DIRECTORY_SEPARATOR.'cacert.pem',
             'allow_redirects' => false,
             'referer' => false,
-            'stream' => true,
+            'sink' => fopen('php://output', 'w'),
+            'on_headers' => function (ResponseInterface $response) {
+                (new AkrezSapiEmitter())->emit($response, true);
+            },
         ], $clientConfig));
 
         try {
@@ -180,4 +183,5 @@ if ($parts['debug']) {
 }
 $agent = new Agent($request);
 $res = $agent->send();
-$agent->emit(1024);
+// $agent->emit(1024);
+die;
