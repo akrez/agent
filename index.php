@@ -39,8 +39,7 @@ class Agent
 
     public function emit()
     {
-        $this->response = $this->response
-            ->withoutHeader('Transfer-Encoding');
+        // $this->response = $this->response->withoutHeader('Transfer-Encoding');
 
         $this->emitResponse($this->response);
     }
