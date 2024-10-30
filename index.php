@@ -1,6 +1,6 @@
 <?php
 
-use Akrez\HttpRunner\SapiEmitter as AkrezSapiEmitter;
+use Akrez\HttpRunner\SapiEmitter;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
@@ -9,9 +9,6 @@ use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
-use HttpSoft\Emitter\SapiEmitter as HttpSoftSapiEmitter;
-use Laminas\HttpHandlerRunner\Emitter\SapiEmitter as LaminasSapiEmitter;
-use Laminas\HttpHandlerRunner\Emitter\SapiStreamEmitter as LaminasSapiStreamEmitter;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -40,12 +37,9 @@ class Agent
         return $this->response = $this->sendRequest($this->request, $timeout, $clientConfig);
     }
 
-    public function emit($maxBufferLength)
+    public static function new(RequestInterface $request)
     {
-        // $this->response = $this->response
-        //     ->withoutHeader('Transfer-Encoding');
-
-        $this->emitResponse($this->response, $maxBufferLength);
+        return new self($request);
     }
 
     protected static function getMultipartBoundary(RequestInterface $request): ?string
@@ -97,7 +91,7 @@ class Agent
             'referer' => false,
             'sink' => fopen('php://output', 'w'),
             'on_headers' => function (ResponseInterface $response) {
-                (new AkrezSapiEmitter())->emit($response, true);
+                (new SapiEmitter())->emit($response, true);
             },
             'curl' => [
                 CURLOPT_DNS_SERVERS => '8.8.8.8,8.8.4.4',
@@ -115,19 +109,6 @@ class Agent
         } catch (Exception $e) {
             return new Response(502, [], json_encode((array) $e), 1.1, 'Internal Server Exception Error');
         }
-    }
-
-    protected static function emitResponse($response, $maxBufferLength)
-    {
-        if ($response->hasHeader('Content-Disposition') or $response->hasHeader('Content-Range')) {
-            return new LaminasSapiStreamEmitter($maxBufferLength);
-        } else {
-            return new LaminasSapiEmitter();
-        }
-
-        return new HttpSoftSapiEmitter($maxBufferLength);
-
-        return (new AkrezSapiEmitter($maxBufferLength))->emit($response);
     }
 }
 
@@ -184,7 +165,4 @@ $request = ServerRequest::fromGlobals()->withUri(new Uri($parts['schema'].'://'.
 if ($parts['debug']) {
     exit(Message::toString($request));
 }
-$agent = new Agent($request);
-$res = $agent->send();
-// $agent->emit(1024);
-exit;
+Agent::new($request)->send();
