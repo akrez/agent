@@ -99,6 +99,9 @@ class Agent
             'on_headers' => function (ResponseInterface $response) {
                 (new AkrezSapiEmitter())->emit($response, true);
             },
+            'curl' => [
+                CURLOPT_DNS_SERVERS => '8.8.8.8,8.8.4.4',
+            ],
         ], $clientConfig));
 
         try {
@@ -184,4 +187,4 @@ if ($parts['debug']) {
 $agent = new Agent($request);
 $res = $agent->send();
 // $agent->emit(1024);
-die;
+exit;
