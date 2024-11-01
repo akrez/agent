@@ -93,9 +93,9 @@ class Agent
             'on_headers' => function (ResponseInterface $response) {
                 (new SapiEmitter())->emit($response, true);
             },
-            'curl' => [
-                CURLOPT_DNS_SERVERS => '8.8.8.8,8.4.4.8',
-            ],
+            // 'curl' => [
+            //     CURLOPT_DNS_SERVERS => '8.8.8.8,8.4.4.8',
+            // ],
         ], $clientConfig));
 
         try {
