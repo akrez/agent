@@ -165,4 +165,4 @@ $request = ServerRequest::fromGlobals()->withUri(new Uri($parts['schema'].'://'.
 if ($parts['debug']) {
     exit(Message::toString($request));
 }
-Agent::new($request)->send();
+Agent::new($request)->send(300);
