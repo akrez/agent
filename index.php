@@ -166,4 +166,3 @@ if ($parts['debug']) {
     exit(Message::toString($request));
 }
 Agent::new($request)->send();
-exit;
