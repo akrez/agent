@@ -94,7 +94,7 @@ class Agent
                 (new SapiEmitter())->emit($response, true);
             },
             'curl' => [
-                CURLOPT_DNS_SERVERS => '8.8.8.8,8.8.4.4',
+                CURLOPT_DNS_SERVERS => '8.8.8.8,8.4.4.8',
             ],
         ], $clientConfig));
 
@@ -166,3 +166,4 @@ if ($parts['debug']) {
     exit(Message::toString($request));
 }
 Agent::new($request)->send();
+exit;
