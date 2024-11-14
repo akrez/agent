@@ -23,6 +23,65 @@ class Agent
     {
     }
 
+    public static function parseUrl(array $globalServer)
+    {
+        $globalServer = $globalServer + [
+            'PATH_INFO' => null,
+            'SCRIPT_NAME' => null,
+            'REQUEST_URI' => null,
+        ];
+
+        if ($globalServer['PATH_INFO']) {
+            $slashedTargetUrl = $globalServer['PATH_INFO'];
+        } elseif ($globalServer['SCRIPT_NAME'] and $globalServer['REQUEST_URI']) {
+            $basePath = str_replace(basename($globalServer['SCRIPT_NAME']), '', $globalServer['SCRIPT_NAME']);
+            $slashedTargetUrl = substr($globalServer['REQUEST_URI'], strlen($basePath));
+        } else {
+            $slashedTargetUrl = null;
+        }
+
+        if ($slashedTargetUrl) {
+            $slashedTargetUrl = ltrim($slashedTargetUrl, " \n\r\t\v\0/");
+        } else {
+            return null;
+        }
+
+        $parts = explode('/', $slashedTargetUrl, 2);
+
+        $result = [
+            'url' => $slashedTargetUrl,
+            'schema' => (isset($globalServer['HTTPS']) ? 'https' : 'http'),
+            'method' => $globalServer['REQUEST_METHOD'],
+            'debug' => false,
+            'protocol_version' => (str_replace('HTTP/', '', $globalServer['SERVER_PROTOCOL'])) * 10,
+        ];
+
+        //sample.com/path
+        if (static::isStringContain($parts[0], '.')) {
+            if (empty($parts[0])) {
+                return null;
+            }
+
+            return $result;
+        }
+
+        if (empty($parts[1])) {
+            return null;
+        }
+
+        $firstLineParts = explode('_', $parts[0]);
+
+        $result = [
+            'url' => $parts[1],
+            'schema' => static::findInArray($firstLineParts, ['https', 'http'], $result['schema']),
+            'method' => static::findInArray($firstLineParts, ['get', 'post', 'head', 'put', 'delete', 'options', 'trace', 'connect', 'patch'], $result['method']),
+            'debug' => static::findInArray($firstLineParts, ['debug'], $result['debug']),
+            'protocol_version' => static::findInArray([10, 11, 20, 30], $firstLineParts, $result['protocol_version']),
+        ];
+
+        return $result;
+    }
+
     public function send($timeout = 60, $clientConfig = [])
     {
         $this->request = $this->request
@@ -110,59 +169,34 @@ class Agent
             return new Response(502, [], json_encode((array) $e), 1.1, 'Internal Server Exception Error');
         }
     }
+
+    protected static function isStringContain(string $haystack, string $needle, int $offset = 0): bool
+    {
+        return ! (false === strpos($haystack, $needle, $offset));
+    }
+
+    protected static function findInArray(array $needles, array $haystack, string $default = null): ?string
+    {
+        foreach ($needles as $needle) {
+            if (in_array(strtolower($needle), $haystack)) {
+                return $needle;
+            }
+        }
+
+        return $default;
+    }
 }
 
-function getNewUrl($globalServer)
-{
-    $globalServer = $globalServer + [
-        'PATH_INFO' => null,
-        'SCRIPT_NAME' => null,
-        'REQUEST_URI' => null,
-    ];
-
-    if ($globalServer['PATH_INFO']) {
-        $slashedTargetUrl = $globalServer['PATH_INFO'];
-    } elseif ($globalServer['SCRIPT_NAME'] and $globalServer['REQUEST_URI']) {
-        $basePath = str_replace(basename($globalServer['SCRIPT_NAME']), '', $globalServer['SCRIPT_NAME']);
-        $slashedTargetUrl = substr($globalServer['REQUEST_URI'], strlen($basePath));
-    } else {
-        $slashedTargetUrl = null;
+$urlParts = Agent::parseUrl($_SERVER);
+if ($urlParts) {
+    $request = ServerRequest::fromGlobals()
+        ->withMethod($urlParts['method'])
+        ->withUri(new Uri($urlParts['schema'].'://'.$urlParts['url']))
+        ->withProtocolVersion(strval($urlParts['protocol_version'] / 10.0));
+    if ($urlParts['debug']) {
+        exit(Message::toString($request));
     }
-
-    if ($slashedTargetUrl) {
-        $slashedTargetUrl = ltrim($slashedTargetUrl, " \n\r\t\v\0/");
-    } else {
-        return null;
-    }
-
-    $parts = explode('/', $slashedTargetUrl, 2);
-
-    $result = [];
-    if (in_array($parts[0], ['https', 'debughttps', 'http', 'debughttp'])) {
-        if (empty($parts[1])) {
-            return null;
-        }
-        $result['schema'] = str_replace('debug', '', $parts[0]);
-        $result['url'] = $parts[1];
-        $result['debug'] = (strpos($parts[0], 'debug') === 0);
-    } else {
-        if (empty($parts[0])) {
-            return null;
-        }
-        $result['schema'] = 'https';
-        $result['url'] = implode('/', $parts);
-        $result['debug'] = false;
-    }
-
-    return $result;
-}
-
-$parts = getNewUrl($_SERVER);
-if (! $parts) {
+    Agent::new($request)->send(300);
+} else {
     exit('Hard');
 }
-$request = ServerRequest::fromGlobals()->withUri(new Uri($parts['schema'].'://'.$parts['url']));
-if ($parts['debug']) {
-    exit(Message::toString($request));
-}
-Agent::new($request)->send(300);
