@@ -17,91 +17,40 @@ require_once './vendor/autoload.php';
 
 class Agent
 {
-    protected ?ResponseInterface $response = null;
-
-    public function __construct(protected RequestInterface $request)
+    public function __construct(protected RequestInterface $request, protected $debug = false)
     {
     }
 
-    public static function parseUrl(array $globalServer)
+    public function getRequest()
     {
-        $globalServer = $globalServer + [
-            'PATH_INFO' => null,
-            'SCRIPT_NAME' => null,
-            'REQUEST_URI' => null,
-        ];
+        return $this->request;
+    }
 
-        if ($globalServer['PATH_INFO']) {
-            $slashedTargetUrl = $globalServer['PATH_INFO'];
-        } elseif ($globalServer['SCRIPT_NAME'] and $globalServer['REQUEST_URI']) {
-            $basePath = str_replace(basename($globalServer['SCRIPT_NAME']), '', $globalServer['SCRIPT_NAME']);
-            $slashedTargetUrl = substr($globalServer['REQUEST_URI'], strlen($basePath));
-        } else {
-            $slashedTargetUrl = null;
-        }
-
-        if ($slashedTargetUrl) {
-            $slashedTargetUrl = ltrim($slashedTargetUrl, " \n\r\t\v\0/");
-        } else {
-            return null;
-        }
-
-        $parts = explode('/', $slashedTargetUrl, 2);
-
-        $result = [
-            'url' => $slashedTargetUrl,
-            'schema' => (isset($globalServer['HTTPS']) ? 'https' : 'http'),
-            'method' => $globalServer['REQUEST_METHOD'],
-            'debug' => false,
-            'protocol_version' => (str_replace('HTTP/', '', $globalServer['SERVER_PROTOCOL'])) * 10,
-        ];
-
-        //sample.com/path
-        if (static::isStringContain($parts[0], '.')) {
-            if (empty($parts[0])) {
-                return null;
-            }
-
-            return $result;
-        }
-
-        if (empty($parts[1])) {
-            return null;
-        }
-
-        $firstLineParts = explode('_', $parts[0]);
-
-        $result = [
-            'url' => $parts[1],
-            'schema' => static::findInArray($firstLineParts, ['https', 'http'], $result['schema']),
-            'method' => static::findInArray($firstLineParts, ['get', 'post', 'head', 'put', 'delete', 'options', 'trace', 'connect', 'patch'], $result['method']),
-            'debug' => static::findInArray($firstLineParts, ['debug'], $result['debug']),
-            'protocol_version' => static::findInArray([10, 11, 20, 30], $firstLineParts, $result['protocol_version']),
-        ];
-
-        return $result;
+    public function getDebug()
+    {
+        return $this->debug;
     }
 
     public function send($timeout = 60, $clientConfig = [])
     {
-        $this->request = $this->request
-            ->withoutHeader('Accept-Encoding')
-            ->withHeader('Accept-Encoding', 'gzip, deflate');
+        $this->request = $this->beforeSend($this->request);
 
-        if ($multipartBoundary = static::getMultipartBoundary($this->request)) {
-            $multipartStream = static::getMultipartStream($multipartBoundary, $this->request);
+        if ($multipartBoundary = $this->getMultipartBoundary($this->request)) {
+            $multipartStream = $this->getMultipartStream($multipartBoundary, $this->request);
             $this->request = $this->request->withBody($multipartStream);
         }
 
-        return $this->response = $this->sendRequest($this->request, $timeout, $clientConfig);
+        return $this->sendRequest($this->request, $timeout, $clientConfig);
     }
 
-    public static function new(RequestInterface $request)
+    protected function beforeSend(RequestInterface $request): RequestInterface
     {
-        return new self($request);
+        return $request
+            ->withoutHeader('Accept-Encoding')
+            ->withHeader('Accept-Encoding', 'gzip, deflate');
     }
 
-    protected static function getMultipartBoundary(RequestInterface $request): ?string
+    protected function getMultipartBoundary(RequestInterface $request): ?string
     {
         $contentType = $request->getHeaderLine('Content-Type');
 
@@ -115,7 +64,7 @@ class Agent
         return null;
     }
 
-    protected static function getMultipartStream(string $multipartBoundary, ServerRequestInterface $request)
+    protected function getMultipartStream(string $multipartBoundary, ServerRequestInterface $request)
     {
         $elements = [];
 
@@ -139,7 +88,7 @@ class Agent
         return new MultipartStream($elements, $multipartBoundary);
     }
 
-    protected static function sendRequest($request, $timeout, $clientConfig): Response
+    protected function sendRequest($request, $timeout, $clientConfig): Response
     {
         $client = new Client(array_replace_recursive([
             'timeout' => $timeout,
@@ -152,9 +101,6 @@ class Agent
             'on_headers' => function (ResponseInterface $response) {
                 (new SapiEmitter())->emit($response, true);
             },
-            // 'curl' => [
-            //     CURLOPT_DNS_SERVERS => '8.8.8.8,8.8.4.4,8.4.4.8',
-            // ],
         ], $clientConfig));
 
         try {
@@ -164,15 +110,77 @@ class Agent
         } catch (ServerException $e) {
             return $e->getResponse();
         } catch (Throwable $e) {
-            return new Response(501, [], json_encode((array) $e), 1.1, 'Internal Server Throwable Error');
+            return new Response(500, [], json_encode((array) $e), 1.1, 'Internal Server Throwable Error');
         } catch (Exception $e) {
-            return new Response(502, [], json_encode((array) $e), 1.1, 'Internal Server Exception Error');
+            return new Response(500, [], json_encode((array) $e), 1.1, 'Internal Server Exception Error');
         }
+    }
+}
+
+class AgentFactory
+{
+    public static function buildUsingGlobalServer(RequestInterface $serverRequest, array $globalServer)
+    {
+        $globalServer = $globalServer + [
+            'PATH_INFO' => null,
+            'HTTPS' => null,
+            'REQUEST_METHOD' => null,
+            'SERVER_PROTOCOL' => null,
+        ];
+
+        $url = ltrim($globalServer['PATH_INFO'], " \n\r\t\v\0/");
+        if (empty($url)) {
+            return null;
+        }
+
+        $parts = explode('/', $url, 2) + [0 => null, 1 => null];
+
+        $result = [
+            'url' => $url,
+            'schema' => (isset($globalServer['HTTPS']) ? 'https' : 'http'),
+            'method' => $globalServer['REQUEST_METHOD'],
+            'debug' => false,
+            'protocol_version' => (str_replace('HTTP/', '', $globalServer['SERVER_PROTOCOL'])) * 10,
+        ];
+
+        if (static::isStringContain($parts[0], '.')) {
+            return static::buildUsingParameters($serverRequest, $parts[0], $result);
+        }
+
+        return static::buildUsingParameters($serverRequest, $parts[1], $result, $parts[0]);
+    }
+
+    public static function buildUsingParameters(RequestInterface $serverRequest, ?string $url, array $default, string $configString = '')
+    {
+        if (empty($url)) {
+            return null;
+        }
+
+        $firstLineParts = explode('_', $configString);
+
+        return static::build(
+            $serverRequest,
+            static::findInArray($firstLineParts, ['get', 'post', 'head', 'put', 'delete', 'options', 'trace', 'connect', 'patch'], $default['method']),
+            static::findInArray($firstLineParts, ['https', 'http'], $default['schema']),
+            $url,
+            static::findInArray([10, 11, 20, 30], $firstLineParts, $default['protocol_version']) / 10.0,
+            static::findInArray($firstLineParts, ['debug'], $default['debug']),
+        );
+    }
+
+    public static function build(RequestInterface $serverRequest, $method, $schema, $url, $protocolVersion, $debug)
+    {
+        $request = $serverRequest
+            ->withMethod($method)
+            ->withUri(new Uri($schema.'://'.$url))
+            ->withProtocolVersion(strval($protocolVersion));
+
+        return new Agent($request, $debug);
     }
 
     protected static function isStringContain(string $haystack, string $needle, int $offset = 0): bool
     {
-        return ! (false === strpos($haystack, $needle, $offset));
+        return false !== strpos($haystack, $needle, $offset);
     }
 
     protected static function findInArray(array $needles, array $haystack, string $default = null): ?string
@@ -187,16 +195,12 @@ class Agent
     }
 }
 
-$urlParts = Agent::parseUrl($_SERVER);
-if ($urlParts) {
-    $request = ServerRequest::fromGlobals()
-        ->withMethod($urlParts['method'])
-        ->withUri(new Uri($urlParts['schema'].'://'.$urlParts['url']))
-        ->withProtocolVersion(strval($urlParts['protocol_version'] / 10.0));
-    if ($urlParts['debug']) {
-        exit(Message::toString($request));
+$agent = AgentFactory::buildUsingGlobalServer(ServerRequest::fromGlobals(), $_SERVER);
+if ($agent) {
+    if ($agent->getDebug()) {
+        exit(Message::toString($agent->getRequest()));
     }
-    Agent::new($request)->send(300);
+    $agent->send(300);
 } else {
     exit('Hard');
 }
