@@ -128,7 +128,7 @@ class AgentFactory
             'SERVER_PROTOCOL' => null,
         ];
 
-        $url = ltrim($globalServer['PATH_INFO'], " \n\r\t\v\0/");
+        $url = ltrim($globalServer['PATH_INFO'].(! empty($globalServer['QUERY_STRING']) ? '?'.$globalServer['QUERY_STRING'] : ''), " \n\r\t\v\0/");
         if (empty($url)) {
             return null;
         }
