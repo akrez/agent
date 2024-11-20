@@ -17,8 +17,16 @@ require_once './vendor/autoload.php';
 
 class Agent
 {
-    public function __construct(protected RequestInterface $request, protected $debug = false)
+    protected RequestInterface $request;
+
+    public function __construct(RequestInterface $request, protected bool $debug = false)
     {
+        if ($multipartBoundary = $this->getMultipartBoundary($request)) {
+            $multipartStream = $this->getMultipartStream($multipartBoundary, $request);
+            $request = $request->withBody($multipartStream);
+        }
+
+        $this->request = $this->prepareRequest($request);
     }
 
     public function getRequest()
@@ -33,17 +41,10 @@ class Agent
 
     public function send($timeout = 60, $clientConfig = [])
     {
-        $this->request = $this->beforeSend($this->request);
-
-        if ($multipartBoundary = $this->getMultipartBoundary($this->request)) {
-            $multipartStream = $this->getMultipartStream($multipartBoundary, $this->request);
-            $this->request = $this->request->withBody($multipartStream);
-        }
-
         return $this->sendRequest($this->request, $timeout, $clientConfig);
     }
 
-    protected function beforeSend(RequestInterface $request): RequestInterface
+    protected function prepareRequest(RequestInterface $request): RequestInterface
     {
         return $request
             ->withoutHeader('Accept-Encoding')
@@ -88,13 +89,13 @@ class Agent
         return new MultipartStream($elements, $multipartBoundary);
     }
 
-    protected function sendRequest($request, $timeout, $clientConfig): Response
+    protected function sendRequest(RequestInterface $request, $timeout, $clientConfig): Response
     {
         $client = new Client(array_replace_recursive([
             'timeout' => $timeout,
             'connect_timeout' => $timeout,
             'read_timeout' => $timeout,
-            'verify' => __DIR__.DIRECTORY_SEPARATOR.'cacert.pem',
+            'verify' => false,
             'allow_redirects' => false,
             'referer' => false,
             'sink' => fopen('php://output', 'w'),
