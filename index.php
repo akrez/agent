@@ -9,6 +9,7 @@ use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
+use GuzzleHttp\RequestOptions;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -91,6 +92,10 @@ class Agent
 
     protected function sendRequest(RequestInterface $request, $timeout, $clientConfig): Response
     {
+        ini_set('output_buffering', 'Off');
+        ini_set('output_handler', '');
+        ini_set('zlib.output_compression', 0);
+
         $client = new Client(array_replace_recursive([
             'timeout' => $timeout,
             'connect_timeout' => $timeout,
@@ -102,6 +107,7 @@ class Agent
             'on_headers' => function (ResponseInterface $response) {
                 (new SapiEmitter())->emit($response, true);
             },
+            RequestOptions::DECODE_CONTENT => false,
         ], $clientConfig));
 
         try {
