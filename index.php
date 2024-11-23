@@ -47,9 +47,7 @@ class Agent
 
     protected function prepareRequest(RequestInterface $request): RequestInterface
     {
-        return $request
-            ->withoutHeader('Accept-Encoding')
-            ->withHeader('Accept-Encoding', 'gzip, deflate');
+        return $request;
     }
 
     protected function getMultipartBoundary(RequestInterface $request): ?string
