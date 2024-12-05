@@ -20,14 +20,32 @@ class Agent
 {
     protected RequestInterface $request;
 
-    public function __construct(RequestInterface $request, protected bool $debug = false)
+    protected bool $debug;
+
+    public function __construct(RequestInterface $serverRequest, ?string $url, ?string $method = null, ?string $schema = null, ?string $protocolVersion = null, bool $debug = false)
     {
-        if ($multipartBoundary = $this->getMultipartBoundary($request)) {
-            $multipartStream = $this->getMultipartStream($multipartBoundary, $request);
-            $request = $request->withBody($multipartStream);
+        $defaultUri = $serverRequest->getUri();
+
+        $newSchema = ($schema ?: $defaultUri->getScheme());
+        $newUri = ($url ? new Uri($url) : $defaultUri)->withScheme($newSchema);
+
+        $serverRequest = $serverRequest->withUri($newUri);
+
+        if ($method) {
+            $serverRequest = $serverRequest->withMethod($method);
         }
 
-        $this->request = $this->prepareRequest($request);
+        if ($protocolVersion) {
+            $serverRequest = $serverRequest->withProtocolVersion(strval($protocolVersion));
+        }
+
+        if ($multipartBoundary = $this->getMultipartBoundary($serverRequest)) {
+            $multipartStream = $this->getMultipartStream($multipartBoundary, $serverRequest);
+            $serverRequest = $serverRequest->withBody($multipartStream);
+        }
+
+        $this->request = $this->prepareRequest($serverRequest);
+        $this->debug = boolval($debug);
     }
 
     public function getRequest()
@@ -132,6 +150,7 @@ class AgentFactory
             'REQUEST_METHOD' => null,
             'SERVER_PROTOCOL' => null,
         ];
+        $globalServer = array_map('strval', $globalServer);
 
         $url = ltrim($globalServer['PATH_INFO'], " \n\r\t\v\0/");
         if (empty($url)) {
@@ -141,7 +160,7 @@ class AgentFactory
 
         $parts = explode('/', $url, 2) + [0 => null, 1 => null];
 
-        $result = [
+        $default = [
             'url' => $url,
             'schema' => (isset($globalServer['HTTPS']) ? 'https' : 'http'),
             'method' => $globalServer['REQUEST_METHOD'],
@@ -149,44 +168,26 @@ class AgentFactory
             'protocol_version' => (str_replace('HTTP/', '', $globalServer['SERVER_PROTOCOL'])) * 10,
         ];
 
-        if (static::isStringContain($parts[0], '.')) {
-            return static::buildUsingParameters($serverRequest, $parts[0], $result);
+        if (false === strpos($parts[0], '.')) {
+            $configs = explode('_', $parts[0]);
+            $url = $parts[1];
+        } else {
+            $configs = [];
+            $url = $parts[0];
         }
 
-        return static::buildUsingParameters($serverRequest, $parts[1], $result, $parts[0]);
-    }
-
-    public static function buildUsingParameters(RequestInterface $serverRequest, ?string $url, array $default, string $configString = '')
-    {
         if (empty($url)) {
             return null;
         }
 
-        $firstLineParts = explode('_', $configString);
-
-        return static::build(
+        return new Agent(
             $serverRequest,
-            static::findInArray($firstLineParts, ['get', 'post', 'head', 'put', 'delete', 'options', 'trace', 'connect', 'patch'], $default['method']),
-            static::findInArray($firstLineParts, ['https', 'http'], $default['schema']),
             $url,
-            static::findInArray([10, 11, 20, 30], $firstLineParts, $default['protocol_version']) / 10.0,
-            static::findInArray($firstLineParts, ['debug'], $default['debug']),
+            static::findInArray($configs, ['get', 'post', 'head', 'put', 'delete', 'options', 'trace', 'connect', 'patch'], $default['method']),
+            static::findInArray($configs, ['https', 'http'], $default['schema']),
+            static::findInArray([10, 11, 20, 30], $configs, $default['protocol_version']) / 10.0,
+            static::findInArray($configs, ['debug'], $default['debug'])
         );
-    }
-
-    public static function build(RequestInterface $serverRequest, $method, $schema, $url, $protocolVersion, $debug)
-    {
-        $request = $serverRequest
-            ->withMethod($method)
-            ->withUri(new Uri($schema.'://'.$url))
-            ->withProtocolVersion(strval($protocolVersion));
-
-        return new Agent($request, $debug);
-    }
-
-    protected static function isStringContain(string $haystack, string $needle, int $offset = 0): bool
-    {
-        return false !== strpos($haystack, $needle, $offset);
     }
 
     protected static function findInArray(array $needles, array $haystack, string $default = null): ?string
