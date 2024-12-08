@@ -27,7 +27,7 @@ class Agent
         $defaultUri = $serverRequest->getUri();
 
         $newSchema = ($schema ?: $defaultUri->getScheme());
-        $newUri = ($url ? new Uri($url) : $defaultUri)->withScheme($newSchema);
+        $newUri = ($url ? new Uri($newSchema.'://'.$url) : $defaultUri)->withScheme($newSchema);
 
         $serverRequest = $serverRequest->withUri($newUri);
 
