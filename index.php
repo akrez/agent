@@ -20,9 +20,9 @@ class Agent
 {
     protected RequestInterface $request;
 
-    protected bool $debug;
+    protected bool $skip;
 
-    public function __construct(RequestInterface $serverRequest, ?string $url, ?string $method = null, ?string $schema = null, ?string $protocolVersion = null, bool $debug = false)
+    public function __construct(RequestInterface $serverRequest, ?string $url = null, ?string $method = null, ?string $schema = null, ?string $protocolVersion = null, bool $skip = false)
     {
         $defaultUri = $serverRequest->getUri();
 
@@ -45,7 +45,7 @@ class Agent
         }
 
         $this->request = $this->prepareRequest($serverRequest);
-        $this->debug = boolval($debug);
+        $this->skip = boolval($skip);
     }
 
     public function getRequest()
@@ -53,14 +53,14 @@ class Agent
         return $this->request;
     }
 
-    public function getDebug()
+    public function getSkip()
     {
-        return $this->debug;
+        return $this->skip;
     }
 
-    public function send($timeout = 60, $clientConfig = [])
+    public function emit($timeout = 60, $clientConfig = [])
     {
-        return $this->sendRequest($this->request, $timeout, $clientConfig);
+        $this->sendRequest($this->request, $timeout, $clientConfig);
     }
 
     protected function prepareRequest(RequestInterface $request): RequestInterface
@@ -138,11 +138,8 @@ class Agent
             return new Response(500, [], json_encode((array) $e), 1.1, 'Internal Server Exception Error');
         }
     }
-}
 
-class AgentFactory
-{
-    public static function buildUsingGlobalServer(RequestInterface $serverRequest, array $globalServer)
+    public static function new(RequestInterface $serverRequest, array $globalServer)
     {
         $globalServer = $globalServer + [
             'PATH_INFO' => null,
@@ -164,7 +161,7 @@ class AgentFactory
             'url' => $url,
             'schema' => (isset($globalServer['HTTPS']) ? 'https' : 'http'),
             'method' => $globalServer['REQUEST_METHOD'],
-            'debug' => false,
+            'skip' => false,
             'protocol_version' => (str_replace('HTTP/', '', $globalServer['SERVER_PROTOCOL'])) * 10,
         ];
 
@@ -186,7 +183,7 @@ class AgentFactory
             static::findInArray($configs, ['get', 'post', 'head', 'put', 'delete', 'options', 'trace', 'connect', 'patch'], $default['method']),
             static::findInArray($configs, ['https', 'http'], $default['schema']),
             static::findInArray([10, 11, 20, 30], $configs, $default['protocol_version']) / 10.0,
-            static::findInArray($configs, ['debug'], $default['debug'])
+            static::findInArray($configs, ['skip'], $default['skip'])
         );
     }
 
@@ -202,12 +199,12 @@ class AgentFactory
     }
 }
 
-$agent = AgentFactory::buildUsingGlobalServer(ServerRequest::fromGlobals(), $_SERVER);
+$agent = Agent::new(ServerRequest::fromGlobals(), $_SERVER);
 if ($agent) {
-    if ($agent->getDebug()) {
+    if ($agent->getSkip()) {
         exit(Message::toString($agent->getRequest()));
     }
-    $agent->send(300);
+    $agent->emit(300);
 } else {
     exit('Hard');
 }
