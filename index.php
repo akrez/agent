@@ -20,9 +20,9 @@ class Agent
 {
     protected RequestInterface $request;
 
-    protected bool $skip;
+    protected bool $debug;
 
-    public function __construct(RequestInterface $serverRequest, ?string $url = null, ?string $method = null, ?string $schema = null, ?string $protocolVersion = null, bool $skip = false)
+    public function __construct(RequestInterface $serverRequest, ?string $url = null, ?string $method = null, ?string $schema = null, ?string $protocolVersion = null, bool $debug = false)
     {
         $defaultUri = $serverRequest->getUri();
 
@@ -45,7 +45,7 @@ class Agent
         }
 
         $this->request = $this->prepareRequest($serverRequest);
-        $this->skip = boolval($skip);
+        $this->debug = boolval($debug);
     }
 
     public function getRequest()
@@ -53,14 +53,19 @@ class Agent
         return $this->request;
     }
 
-    public function getSkip()
+    public function getDebug()
     {
-        return $this->skip;
+        return $this->debug;
     }
 
     public function emit($timeout = 60, $clientConfig = [])
     {
-        $this->sendRequest($this->request, $timeout, $clientConfig);
+        if ($this->getDebug()) {
+            $response = new Response(200, [], Message::toString($this->getRequest()));
+            (new SapiEmitter())->emit($response);
+        } else {
+            $this->sendRequest($this->request, $timeout, $clientConfig);
+        }
     }
 
     protected function prepareRequest(RequestInterface $request): RequestInterface
@@ -139,31 +144,14 @@ class Agent
         }
     }
 
-    public static function new(RequestInterface $serverRequest, array $globalServer)
+    public static function new(RequestInterface $serverRequest)
     {
-        $globalServer = $globalServer + [
-            'PATH_INFO' => null,
-            'HTTPS' => null,
-            'REQUEST_METHOD' => null,
-            'SERVER_PROTOCOL' => null,
-        ];
-        $globalServer = array_map('strval', $globalServer);
-
-        $url = ltrim($globalServer['PATH_INFO'], " \n\r\t\v\0/");
+        $url = ltrim($serverRequest->getUri()->getQuery(), " \n\r\t\v\0/");
         if (empty($url)) {
             return null;
         }
-        $url = $url.(empty($globalServer['QUERY_STRING']) ? '' : '?'.$globalServer['QUERY_STRING']);
 
         $parts = explode('/', $url, 2) + [0 => null, 1 => null];
-
-        $default = [
-            'url' => $url,
-            'schema' => (isset($globalServer['HTTPS']) ? 'https' : 'http'),
-            'method' => $globalServer['REQUEST_METHOD'],
-            'skip' => false,
-            'protocol_version' => (str_replace('HTTP/', '', $globalServer['SERVER_PROTOCOL'])) * 10,
-        ];
 
         if (false === strpos($parts[0], '.')) {
             $configs = explode('_', $parts[0]);
@@ -180,10 +168,10 @@ class Agent
         return new Agent(
             $serverRequest,
             $url,
-            static::findInArray($configs, ['get', 'post', 'head', 'put', 'delete', 'options', 'trace', 'connect', 'patch'], $default['method']),
-            static::findInArray($configs, ['https', 'http'], $default['schema']),
-            static::findInArray([10, 11, 20, 30], $configs, $default['protocol_version']) / 10.0,
-            static::findInArray($configs, ['skip'], $default['skip'])
+            static::findInArray($configs, ['get', 'post', 'head', 'put', 'delete', 'options', 'trace', 'connect', 'patch'], $serverRequest->getMethod()),
+            static::findInArray($configs, ['https', 'http'], $serverRequest->getUri()->getScheme()),
+            static::findInArray([10, 11, 20, 30], $configs, $serverRequest->getProtocolVersion() * 10) / 10.0,
+            static::findInArray($configs, ['debug'], false)
         );
     }
 
@@ -199,12 +187,4 @@ class Agent
     }
 }
 
-$agent = Agent::new(ServerRequest::fromGlobals(), $_SERVER);
-if ($agent) {
-    if ($agent->getSkip()) {
-        exit(Message::toString($agent->getRequest()));
-    }
-    $agent->emit(300);
-} else {
-    exit('Hard');
-}
+Agent::new(ServerRequest::fromGlobals())?->emit(300);

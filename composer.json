@@ -1,8 +1,6 @@
 {
     "require": {
         "guzzlehttp/guzzle": "*",
-        "httpsoft/http-emitter": "*",
-        "laminas/laminas-httphandlerrunner": "*",
         "akrez/http-runner": "^1.0"
     },
     "require-dev": {
