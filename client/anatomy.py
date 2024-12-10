@@ -32,4 +32,4 @@ def request(flow: HTTPFlow):
 
     # print(assemble_request(flow.request))
     # print(old_http_version)
-    # print(new_path)
+    # print(flow.request.path)
