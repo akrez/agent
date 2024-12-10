@@ -21,7 +21,7 @@ def request(flow: HTTPFlow):
 
     old_http_version = str(int(float(flow.request.http_version.replace("HTTP/", ""))*10))
 
-    flow.request.path           = new_path_prefix + "/" + flow.request.method + "_" +  flow.request.scheme + "_" + old_http_version + "/" + (flow.request.host) + (flow.request.path)
+    flow.request.path           = new_path_prefix + "?" + flow.request.method + "_" +  flow.request.scheme + "_" + old_http_version + "/" + (flow.request.host) + (flow.request.path)
     flow.request.method         = "POST"
     flow.request.http_version   = "HTTP/2.0"
     flow.request.scheme         = new_scheme
@@ -30,6 +30,6 @@ def request(flow: HTTPFlow):
 
     flow.request.headers["host"] = new_host
 
-    #print(assemble_request(flow.request))
+    # print(assemble_request(flow.request))
     # print(old_http_version)
     # print(new_path)
