@@ -9,6 +9,7 @@ import time
 from mitmproxy.http import HTTPFlow
 from mitmproxy import version
 from urllib.parse import urlparse
+from time import gmtime, strftime
 
 def request(flow: HTTPFlow):
 
@@ -21,6 +22,9 @@ def request(flow: HTTPFlow):
 
     old_http_version = str(int(float(flow.request.http_version.replace("HTTP/", ""))*10))
 
+    # print(assemble_request(flow.request))
+    print("["+strftime("%Y-%m-%d %H:%M:%S", gmtime()) + "] " + flow.request.http_version + " " + flow.request.method + "\t" + flow.request.host)
+
     flow.request.path           = new_path_prefix + "?" + flow.request.method + "_" +  flow.request.scheme + "_" + old_http_version + "/" + (flow.request.host) + (flow.request.path)
     flow.request.method         = "POST"
     flow.request.http_version   = "HTTP/2.0"
@@ -30,6 +34,4 @@ def request(flow: HTTPFlow):
 
     flow.request.headers["host"] = new_host
 
-    # print(assemble_request(flow.request))
-    # print(old_http_version)
-    # print(flow.request.path)
+    # print(flow.request.scheme + "://" + (flow.request.host) + (flow.request.path) + "\r\n")
